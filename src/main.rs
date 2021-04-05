@@ -56,7 +56,7 @@ struct MyConfig {
 
 async fn get_json(url: &str) -> Result<String, reqwest::Error> {
 
-    println!("Parsing the moneypoolinformations.");
+    println!("Parsing the moneypool informations.");
 
     let res = reqwest::get(url).await?;
 
