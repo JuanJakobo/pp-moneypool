@@ -44,6 +44,24 @@ struct Contributor {
     full_name: String,
 }
 
+
+async fn get_json(url: &str) -> Result<String, reqwest::Error> {
+
+    println!("Parsing the moneypoolinformations.");
+
+    let res = reqwest::get(url).await?;
+
+    let body = res.text().await?;
+
+    let document = Html::parse_document(&body);
+    
+    //<script type="application/json" id="store">
+    let selector = Selector::parse(r#"script[id="store"#).unwrap();
+    let fragment = document.select(&selector).next().unwrap();
+    
+    Ok(fragment.inner_html())
+}
+
 #[tokio::main]
 async fn main() {
 
