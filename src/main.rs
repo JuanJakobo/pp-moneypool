@@ -1,12 +1,12 @@
 use chrono::DateTime;
-use mysql::prelude::*;
-use mysql::*;
-use serde::Deserialize;
+use mysql::prelude::{Queryable};
+use mysql::{Conn, params, from_row, OptsBuilder};
+use serde::{Serialize, Deserialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use futures::executor::block_on;
-
-mod parser;
+use scraper::{Html, Selector};
+use std::path::Path;
 
 #[derive(Deserialize, Debug)]
 struct Root {
@@ -44,6 +44,15 @@ struct Contributor {
     full_name: String,
 }
 
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct MyConfig {
+    db_user: String,
+    db_password: String,
+    db_address: String,
+    db_port: u16,
+    db_name: String,
+    pool_id: String,
+}
 
 async fn get_json(url: &str) -> Result<String, reqwest::Error> {
 
@@ -65,32 +74,50 @@ async fn get_json(url: &str) -> Result<String, reqwest::Error> {
 #[tokio::main]
 async fn main() {
 
-    let mut payments: Vec<Payment> = Vec::new();
-    let mut contributors: Vec<Contributor> = Vec::new();
+    let configpath = "db.conf";
+    let cfg: MyConfig;
 
-    let pool_id = "";
-    let paypal_url = "";
-    let mysql_url = "";
+    if Path::new(configpath).exists() {
 
-    let future = parser::get_json(paypal_url);
+        cfg = confy::load_path(configpath).unwrap();
+    } else {
+        panic!("No configfile found. Please create.");
+    }
+
+    let opts = OptsBuilder::new()
+    .user(Some(cfg.db_user))
+    .pass(Some(cfg.db_password))
+    .ip_or_hostname(Some(cfg.db_address))
+    .tcp_port(cfg.db_port)
+    .db_name(Some(cfg.db_name));
+
+    let mut conn = Conn::new(opts).unwrap();
+
+    //check if paypal_url exists
+    let mut paypal_url: String = "https://www.paypal.com/pools/c/".to_string();
+    paypal_url.push_str(&cfg.pool_id);
+
+    let future = get_json(&paypal_url);
     let json = block_on(future).unwrap();
 
-    let root = serde_json::from_str::<Root>(&json).unwrap();
+    let root = serde_json::from_str::<Root>(&json).expect("The moneypool does not exist.");
+
+    let title = root.campaign[&cfg.pool_id]["title"].to_string();
+    println!("The title of the moneypool is {}.", title);
 
     //get the creator data
-    let owner_contributor_id = root.campaign[pool_id]["owner"]["id"].as_str().unwrap();
-    let owner_full_name = root.campaign[pool_id]["owner"]["full_name"].to_string();
+    let owner_contributor_id = root.campaign[&cfg.pool_id]["owner"]["id"].as_str().unwrap();
+    let owner_full_name = root.campaign[&cfg.pool_id]["owner"]["full_name"].to_string();
 
+    let mut payments: Vec<Payment> = Vec::new();
+    let mut contributors: Vec<Contributor> = Vec::new();
+    
     contributors.push(Contributor {
         contributor_id: owner_contributor_id.to_string(),
         full_name: owner_full_name,
     });
 
-    let mut owner_amount = root.campaign[pool_id]["pledge"].as_f64().unwrap();
-
-    //connect to mysql
-    let pool = Pool::new(mysql_url).unwrap();
-    let mut conn = pool.get_conn().unwrap();
+    let mut owner_amount = root.campaign[&cfg.pool_id]["pledge"].as_f64().unwrap();
 
     //create tables if not exist
     conn.query_drop(
@@ -102,7 +129,7 @@ async fn main() {
                 UNIQUE KEY unique_id (id)
         )",
     )
-    .unwrap();
+    .expect("Could not create table payments.");
 
     conn.query_drop(
         r"CREATE TABLE IF NOT EXISTS contributors (
@@ -110,11 +137,10 @@ async fn main() {
             full_name VARCHAR(30)
         )",
     )
-    .unwrap();
+    .expect("Could not create table contributors.");
 
     //get amount owner has payed till today
     let mut owner_sum = 0.0;
-
     conn.exec_iter(
         "SELECT amount, contributor_id as a from payments where contributor_id = :owner_contributor_id",
         params! {owner_contributor_id},
@@ -135,7 +161,7 @@ async fn main() {
         });
     }
 
-    //write json to payment and contributors
+    //add payments from "normal" contributors
     for elem in root.txns.list {
         payments.push(Payment {
             date: elem.date,
@@ -152,8 +178,8 @@ async fn main() {
         });
     }
 
-    conn.exec_batch(
-        r"INSERT IGNORE INTO contributors (contributor_id, full_name)
+    match conn.exec_batch(
+        r"INSERT INTO contributors (contributor_id, full_name)
           VALUES (:contributor_id, :full_name)",
         contributors.iter().map(|c| {
             params! {
@@ -161,11 +187,17 @@ async fn main() {
                 "full_name" => c.full_name.as_str(),
             }
         }),
-    )
-    .unwrap();
+    ) {
+        Ok(_) => {
+            println!("Added new contributors.");
+        },
+        Err(_) => {
+            println!("No new contributors.");
+        }
+    }
 
-    conn.exec_batch(
-        r"INSERT IGNORE INTO payments (id, date, amount, contributor_id)
+    match conn.exec_batch(
+        r"INSERT INTO payments (id, date, amount, contributor_id)
           VALUES (:id, :date, :amount, :contributor_id)",
         payments.iter().map(|p| {
             params! {
@@ -175,9 +207,14 @@ async fn main() {
                 "contributor_id" => p.contributor_id.as_str(),
             }
         }),
-    )
-    .unwrap();
-
+    ) {
+        Ok(_) => {
+            println!("Added new payments.");
+        },
+        Err(_) => {
+            println!("No new payments.");
+        }
+    }
     println!("Import done.");
 
 }
