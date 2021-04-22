@@ -1,11 +1,11 @@
 use chrono::DateTime;
-use mysql::prelude::{Queryable};
-use mysql::{Conn, params, from_row, OptsBuilder};
-use serde::{Serialize, Deserialize};
+use futures::executor::block_on;
+use mysql::prelude::Queryable;
+use mysql::{from_row, params, Conn, OptsBuilder};
+use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use futures::executor::block_on;
-use scraper::{Html, Selector};
 use std::path::Path;
 
 #[derive(Deserialize, Debug)]
@@ -55,7 +55,6 @@ struct MyConfig {
 }
 
 async fn get_json(url: &str) -> Result<String, reqwest::Error> {
-
     println!("Parsing the moneypool informations.");
 
     let res = reqwest::get(url).await?;
@@ -63,33 +62,29 @@ async fn get_json(url: &str) -> Result<String, reqwest::Error> {
     let body = res.text().await?;
 
     let document = Html::parse_document(&body);
-    
     //<script type="application/json" id="store">
     let selector = Selector::parse(r#"script[id="store"#).unwrap();
     let fragment = document.select(&selector).next().unwrap();
-    
     Ok(fragment.inner_html())
 }
 
 #[tokio::main]
 async fn main() {
-
     let configpath = "db.conf";
     let cfg: MyConfig;
 
     if Path::new(configpath).exists() {
-
         cfg = confy::load_path(configpath).unwrap();
     } else {
         panic!("No configfile found. Please create.");
     }
 
     let opts = OptsBuilder::new()
-    .user(Some(cfg.db_user))
-    .pass(Some(cfg.db_password))
-    .ip_or_hostname(Some(cfg.db_address))
-    .tcp_port(cfg.db_port)
-    .db_name(Some(cfg.db_name));
+        .user(Some(cfg.db_user))
+        .pass(Some(cfg.db_password))
+        .ip_or_hostname(Some(cfg.db_address))
+        .tcp_port(cfg.db_port)
+        .db_name(Some(cfg.db_name));
 
     let mut conn = Conn::new(opts).unwrap();
 
@@ -111,7 +106,6 @@ async fn main() {
 
     let mut payments: Vec<Payment> = Vec::new();
     let mut contributors: Vec<Contributor> = Vec::new();
-    
     contributors.push(Contributor {
         contributor_id: owner_contributor_id.to_string(),
         full_name: owner_full_name,
@@ -216,5 +210,4 @@ async fn main() {
         }
     }
     println!("Import done.");
-
 }
