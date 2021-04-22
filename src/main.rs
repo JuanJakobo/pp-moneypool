@@ -174,7 +174,8 @@ async fn main() {
 
     match conn.exec_batch(
         r"INSERT INTO contributors (contributor_id, full_name)
-          VALUES (:contributor_id, :full_name)",
+          VALUES (:contributor_id, :full_name)
+          ON DUPLICATE KEY UPDATE contributor_id=contributor_id",
         contributors.iter().map(|c| {
             params! {
                 "contributor_id" => c.contributor_id.as_str(),
@@ -183,16 +184,21 @@ async fn main() {
         }),
     ) {
         Ok(_) => {
-            println!("Added new contributors.");
-        },
-        Err(_) => {
-            println!("No new contributors.");
+            if conn.affected_rows() > 0 {
+                println!("Added new contributors.");
+            } else {
+                println!("No new contributors.");
+            }
+        }
+        Err(e) => {
+            eprintln!("{}", e);
         }
     }
 
     match conn.exec_batch(
         r"INSERT INTO payments (id, date, amount, contributor_id)
-          VALUES (:id, :date, :amount, :contributor_id)",
+          VALUES (:id, :date, :amount, :contributor_id)
+          ON DUPLICATE KEY UPDATE id=id",
         payments.iter().map(|p| {
             params! {
                 "id" => p.id.as_str(),
@@ -203,10 +209,14 @@ async fn main() {
         }),
     ) {
         Ok(_) => {
-            println!("Added new payments.");
-        },
-        Err(_) => {
-            println!("No new payments.");
+            if conn.affected_rows() > 0 {
+                println!("Added new payments.");
+            } else {
+                println!("No new payments.");
+            }
+        }
+        Err(e) => {
+            eprintln!("{}", e);
         }
     }
     println!("Import done.");
