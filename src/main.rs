@@ -172,52 +172,66 @@ async fn main() {
         });
     }
 
-    match conn.exec_batch(
-        r"INSERT INTO contributors (contributor_id, full_name)
-          VALUES (:contributor_id, :full_name)
-          ON DUPLICATE KEY UPDATE contributor_id=contributor_id",
-        contributors.iter().map(|c| {
+    let mut newcontributors = false;
+
+    for c in &contributors {
+        match conn.exec_drop(
+            r"INSERT INTO contributors (contributor_id, full_name)
+            VALUES (:contributor_id, :full_name)
+            ON DUPLICATE KEY UPDATE contributor_id=contributor_id",
             params! {
                 "contributor_id" => c.contributor_id.as_str(),
                 "full_name" => c.full_name.as_str(),
+            },
+        ) {
+            Ok(_) => {
+                if conn.affected_rows() > 0 {
+                    println!(
+                        "Added new contributor ({},{}.)",
+                        c.contributor_id, c.full_name
+                    );
+                    newcontributors = true;
+                }
             }
-        }),
-    ) {
-        Ok(_) => {
-            if conn.affected_rows() > 0 {
-                println!("Added new contributors.");
-            } else {
-                println!("No new contributors.");
+            Err(e) => {
+                eprintln!("{}", e);
             }
-        }
-        Err(e) => {
-            eprintln!("{}", e);
         }
     }
+    if !newcontributors {
+        println!("No new contributors.");
+    }
 
-    match conn.exec_batch(
-        r"INSERT INTO payments (id, date, amount, contributor_id)
-          VALUES (:id, :date, :amount, :contributor_id)
-          ON DUPLICATE KEY UPDATE id=id",
-        payments.iter().map(|p| {
+    let mut newpayment = false;
+
+    for p in &payments {
+        match conn.exec_drop(
+            r"INSERT INTO payments (id, date, amount, contributor_id)
+        VALUES (:id, :date, :amount, :contributor_id)
+        ON DUPLICATE KEY UPDATE id=id",
             params! {
                 "id" => p.id.as_str(),
                 "date" => p.date.naive_utc(),
                 "amount" => p.amount,
                 "contributor_id" => p.contributor_id.as_str(),
+            },
+        ) {
+            Ok(_) => {
+                if conn.affected_rows() > 0 {
+                    println!(
+                        "Added new payment ({},{},{},{}.)",
+                        p.id, p.date, p.amount, p.contributor_id
+                    );
+                    newpayment = true;
+                }
             }
-        }),
-    ) {
-        Ok(_) => {
-            if conn.affected_rows() > 0 {
-                println!("Added new payments.");
-            } else {
-                println!("No new payments.");
+            Err(e) => {
+                eprintln!("{}", e);
             }
         }
-        Err(e) => {
-            eprintln!("{}", e);
-        }
+    }
+    if !newpayment {
+        println!("No new payments.");
     }
     println!("Import done.");
 }
