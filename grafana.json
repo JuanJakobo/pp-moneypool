@@ -16,6 +16,7 @@
   "gnetId": null,
   "graphTooltip": 0,
   "id": 5,
+  "iteration": 1622470485152,
   "links": [],
   "panels": [
     {
@@ -25,10 +26,12 @@
           "color": {
             "mode": "fixed"
           },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
+          "links": [
+            {
+              "title": "Link",
+              "url": "/d/yZvBh0sGz/moneypool?orgId=1&var-name=${__series.name}"
+            }
+          ],
           "mappings": [],
           "thresholds": {
             "mode": "percentage",
@@ -36,14 +39,6 @@
               {
                 "color": "green",
                 "value": null
-              },
-              {
-                "color": "#E24D42",
-                "value": 40
-              },
-              {
-                "color": "#EAB839",
-                "value": 70
               }
             ]
           },
@@ -70,16 +65,17 @@
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.5.7",
       "targets": [
         {
           "format": "time_series",
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  UNIX_TIMESTAMP(p.date) as time_sec,\n  p.amount as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\nWHERE $__timeFilter(date)\nORDER BY date ASC",
+          "rawSql": "SELECT\n  UNIX_TIMESTAMP(p.date) as time_sec,\n  p.amount as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\nWHERE $__timeFilter(date)\nORDER BY full_name,date  ASC",
           "refId": "A",
           "select": [
             [
@@ -114,10 +110,13 @@
           "color": {
             "mode": "fixed"
           },
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
+          "displayName": "Total",
+          "links": [
+            {
+              "title": "Link",
+              "url": "/d/yZvBh0sGz/doppelkopf?orgId=1&var-name=All"
+            }
+          ],
           "mappings": [],
           "thresholds": {
             "mode": "percentage",
@@ -149,7 +148,7 @@
       "id": 11,
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -159,9 +158,10 @@
           "fields": "",
           "values": false
         },
+        "text": {},
         "textMode": "auto"
       },
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.5.7",
       "targets": [
         {
           "format": "time_series",
@@ -192,10 +192,10 @@
       ],
       "timeFrom": null,
       "timeShift": null,
-      "title": "Total ",
+      "title": " ",
       "transformations": [
         {
-          "id": "merge",
+          "id": "seriesToRows",
           "options": {}
         }
       ],
@@ -208,33 +208,14 @@
       "dashes": false,
       "datasource": "MoneypoolMySQL",
       "fieldConfig": {
-        "defaults": {
-          "custom": {
-            "align": null,
-            "filterable": false
-          },
-          "mappings": [],
-          "thresholds": {
-            "mode": "absolute",
-            "steps": [
-              {
-                "color": "green",
-                "value": null
-              },
-              {
-                "color": "red",
-                "value": 80
-              }
-            ]
-          }
-        },
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 24,
+        "h": 6,
+        "w": 17,
         "x": 0,
         "y": 4
       },
@@ -260,7 +241,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -274,7 +255,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(date,'1M',0) as time,\n  sum(p.amount) as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\n  \nWHERE $__timeFilter(date)  \ngroup by time, metric\nORDER BY time ASC\n",
+          "rawSql": "SELECT\n  $__timeGroup(date,'1M',0) as time,\n  sum(p.amount) as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\n  \nWHERE $__timeFilter(date)  \ngroup by time, metric\nORDER BY full_name, time ASC\n",
           "refId": "A",
           "select": [
             [
@@ -340,41 +321,116 @@
       }
     },
     {
-      "aliasColors": {},
-      "bars": true,
-      "dashLength": 10,
-      "dashes": false,
       "datasource": "MoneypoolMySQL",
       "fieldConfig": {
         "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
           "custom": {
-            "align": null,
+            "align": "left",
+            "displayMode": "auto",
             "filterable": false
           },
           "mappings": [],
           "thresholds": {
-            "mode": "absolute",
+            "mode": "percentage",
             "steps": [
               {
                 "color": "green",
                 "value": null
               },
               {
-                "color": "red",
-                "value": 80
+                "color": "#E24D42",
+                "value": 40
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
               }
             ]
-          }
+          },
+          "unit": "currencyEUR"
         },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 7,
+        "x": 17,
+        "y": 4
+      },
+      "id": 12,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Hendrik Wellkamp"
+          }
+        ]
+      },
+      "pluginVersion": "7.5.7",
+      "targets": [
+        {
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  DATE_FORMAT(p.date, \"%d-%M-%Y\") as Datum,\n  c.full_name as Name,\n  p.amount as Betrag\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\n  where  c.full_name in ($name) and $__timeFilter(date)\nORDER BY date desc",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Last payments",
+      "transformations": [
+        {
+          "id": "renameByRegex",
+          "options": {
+            "regex": "(.*)",
+            "renamePattern": "$1"
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "aliasColors": {},
+      "bars": true,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "MoneypoolMySQL",
+      "fieldConfig": {
+        "defaults": {},
         "overrides": []
       },
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 12,
-        "w": 24,
+        "h": 10,
+        "w": 17,
         "x": 0,
-        "y": 11
+        "y": 10
       },
       "hiddenSeries": false,
       "id": 6,
@@ -398,7 +454,7 @@
         "alertThreshold": true
       },
       "percentage": false,
-      "pluginVersion": "7.3.6",
+      "pluginVersion": "7.5.7",
       "pointradius": 2,
       "points": false,
       "renderer": "flot",
@@ -412,7 +468,7 @@
           "group": [],
           "metricColumn": "none",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(date,'5d',0) as time,\n  sum(p.amount) as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\n  \nWHERE $__timeFilter(date)  \ngroup by time, metric\nORDER BY time ASC\n",
+          "rawSql": "SELECT\n  $__timeGroup(date,'5d',0) as time,\n  sum(p.amount) as value,\n  c.full_name as metric\nFROM payments AS p\n  INNER JOIN\n    contributors as c\n  ON p.contributor_id = c.contributor_id\n  \nWHERE $__timeFilter(date)  \ngroup by time, metric\nORDER BY full_name, time ASC\n",
           "refId": "A",
           "select": [
             [
@@ -478,15 +534,48 @@
       }
     }
   ],
-  "refresh": "1d",
-  "schemaVersion": 26,
+  "refresh": false,
+  "schemaVersion": 27,
   "style": "dark",
   "tags": [],
   "templating": {
-    "list": []
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": "MoneypoolMySQL",
+        "definition": "SELECT full_name FROM contributors",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": true,
+        "label": null,
+        "multi": true,
+        "name": "name",
+        "options": [],
+        "query": "SELECT full_name FROM contributors",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
   },
   "time": {
-    "from": "now-1y",
+    "from": "2020-04-30T22:00:00.000Z",
     "to": "now"
   },
   "timepicker": {
@@ -498,5 +587,5 @@
   "timezone": "",
   "title": "Moneypool",
   "uid": "yZvBh0sGz",
-  "version": 13
+  "version": 25
 }
